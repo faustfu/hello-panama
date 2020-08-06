@@ -15,8 +15,8 @@ impl<T> Sender<T> {
     pub fn send(&mut self, t: T) {
         let queue = self.inner.queue.lock().unwrap();
         queue.push_back(t);
-        drop(queue); // Reduce the arc counter.
-        self.inner.available.notify_one(); // Teigger the flag
+        drop(queue); // Unlock the object before notifying other threads to do sth.
+        self.inner.available.notify_one(); // Trigger the flag
     }
 }
 
