@@ -1,16 +1,39 @@
-use std::sync::{Arc, Mutex};
+use std::collections::VecDeque;
+use std::sync::{Arc, Condvar, Mutex};
 
 //
 struct Inner<T> {
-    queue: Mutex<Vec<T>>,
+    queue: Mutex<VecDeque<T>>,
+    available: Condvar,
 }
 
 pub struct Sender<T> {
     inner: Arc<Inner<T>>,
 }
 
+impl<T> Sender<T> {
+    pub fn send(&mut self, t: T) {
+        let queue = self.inner.queue.lock().unwrap();
+        queue.push_back(t);
+        drop(queue); // Reduce the arc counter.
+        self.inner.available.notify_one(); // Teigger the flag
+    }
+}
+
 pub struct Receiver<T> {
     inner: Arc<Inner<T>>,
+}
+
+impl<T> Receiver<T> {
+    pub fn recv(&mut self) -> T {
+        let mut queue = self.inner.queue.lock().unwrap();
+        loop {
+            match queue.pop_front() {
+                Some(t) => return t,
+                None => queue = self.inner.available.wait(queue).unwrap(), // Wait until the available flag is triggered.
+            }
+        }
+    }
 }
 
 pub fn channel<T>() -> (Sender<T>, Receiver<T>) {
