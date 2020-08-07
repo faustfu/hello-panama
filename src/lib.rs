@@ -15,7 +15,7 @@ impl<T> Sender<T> {
     pub fn send(&mut self, t: T) {
         let queue = self.inner.queue.lock().unwrap();
         queue.push_back(t);
-        drop(queue); // Unlock the object before notifying other threads to do sth.
+        drop(queue); // Drop the guard to unlock the object before notifying other threads to do sth.
         self.inner.available.notify_one(); // Trigger the flag
     }
 }
@@ -39,6 +39,7 @@ impl<T> Receiver<T> {
 pub fn channel<T>() -> (Sender<T>, Receiver<T>) {
     let inner = Inner {
         queue: Mutex::default(), // Create default value by its type.
+        available: Condvar::default(),
     };
     let inner = Arc::new(inner);
 
