@@ -13,7 +13,7 @@ pub struct Sender<T> {
 
 impl<T> Sender<T> {
     pub fn send(&mut self, t: T) {
-        let queue = self.inner.queue.lock().unwrap();
+        let mut queue = self.inner.queue.lock().unwrap();
         queue.push_back(t);
         drop(queue); // Drop the guard to unlock the object before notifying other threads to do sth.
         self.inner.available.notify_one(); // Trigger the flag
